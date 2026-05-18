@@ -30,7 +30,6 @@ h1{font-size:2.2em;background:linear-gradient(90deg,#f7971e,#ffd200);-webkit-bac
   background:rgba(0,0,0,0.3);padding:16px 32px;border-radius:14px;
   margin:12px 0;animation:fadeUp 0.5s ease 0.1s both;letter-spacing:2px;
 }
-.card .formula .pi{font-family:"Cambria Math","Times New Roman",serif;font-style:italic;font-size:1.1em;color:#ffd700;}
 .card .params{
   color:#aaa;font-size:1em;margin-top:16px;line-height:1.8;
   animation:fadeUp 0.5s ease 0.2s both;
@@ -153,9 +152,8 @@ function generate(){
   document.getElementById('cardParams').textContent=formatParams(data);
 
   // Style π in formula
-  const styled=data.formula.replace(/π/g,'<span class="pi">π</span>');
-  document.getElementById('cardFormula').innerHTML=styled;
-  document.getElementById('cardNote').innerHTML=item.note.replace(/π/g,'<span class="pi">π</span>');
+  document.getElementById('cardFormula').textContent=data.formula;
+  document.getElementById('cardNote').textContent=item.note;
 
   // Hide answer, show button
   document.getElementById('answerArea').style.display='none';
@@ -238,23 +236,14 @@ function sectRing(d){
   ctx.clearRect(0,0,360,160);
   const cx=120,cy=80,bigR=55,smallR=55*d.r/d.R;
   const n=d.n;const ang=n*PI/180;
-  // Outer sector
-  ctx.beginPath();ctx.moveTo(cx,cy);
-  ctx.arc(cx,cy,bigR,-PI/2,-PI/2+ang);
+  // Draw ring sector as single path: outer arc + inner arc reversed
+  ctx.beginPath();
+  ctx.arc(cx,cy,bigR,-PI/2,-PI/2+ang);          // outer arc
+  ctx.arc(cx,cy,smallR,-PI/2+ang,-PI/2,true);   // inner arc reversed
   ctx.closePath();
-  // Inner circle (cutout) - reverse direction for evenodd fill
-  ctx.moveTo(cx+smallR*Math.cos(-PI/2+ang),cy+smallR*Math.sin(-PI/2+ang));
-  ctx.arc(cx,cy,smallR,-PI/2+ang,-PI/2,true);
-  ctx.closePath();
-  ctx.fillStyle='rgba(247,151,30,0.35)';ctx.fill('evenodd');
+  ctx.fillStyle='rgba(247,151,30,0.35)';ctx.fill();
   ctx.strokeStyle='#f7971e';ctx.lineWidth=2;ctx.stroke();
-  // Inner arc
-  ctx.beginPath();ctx.arc(cx,cy,smallR,-PI/2,-PI/2+ang);
-  ctx.strokeStyle='#4fc3f7';ctx.lineWidth=1.5;ctx.stroke();
-  // Radius lines
-  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+bigR*Math.cos(-PI/2),cy+bigR*Math.sin(-PI/2));
-  ctx.moveTo(cx,cy);ctx.lineTo(cx+bigR*Math.cos(-PI/2+ang),cy+bigR*Math.sin(-PI/2+ang));
-  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.stroke();
+  // Label
   ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='center';
   ctx.fillText('R='+d.R,cx+bigR*0.6,cy-20);
   ctx.fillText('r='+d.r,cx+smallR*0.7,cy-20);
