@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>几何公式随机生成器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  color:#e0e0e0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+}
+.container{text-align:center;padding:30px;max-width:700px;width:100%;}
+h1{font-size:2.2em;background:linear-gradient(90deg,#f7971e,#ffd200);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
+.sub{color:#888;margin-bottom:30px;font-size:14px;}
+
+.card{
+  background:rgba(255,255,255,0.04);border-radius:24px;padding:40px 30px;
+  border:1px solid rgba(255,255,255,0.08);min-height:280px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:all 0.4s;margin-bottom:25px;
+}
+.card .title{
+  font-size:2em;font-weight:bold;color:#f7971e;margin-bottom:20px;
+  animation:fadeUp 0.5s ease;
+}
+.card .formula{
+  font-size:1.8em;color:#ffd200;font-family:"Courier New",monospace;
+  background:rgba(0,0,0,0.3);padding:16px 32px;border-radius:14px;
+  margin:12px 0;animation:fadeUp 0.5s ease 0.1s both;
+}
+.card .params{
+  color:#aaa;font-size:1em;margin-top:16px;line-height:1.8;
+  animation:fadeUp 0.5s ease 0.2s both;
+}
+.card .note{
+  color:#777;font-size:0.85em;margin-top:10px;
+  animation:fadeUp 0.5s ease 0.3s both;
+}
+.canvas-wrap{margin:12px 0;animation:fadeUp 0.5s ease 0.15s both;}
+canvas{border-radius:12px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+.btn{
+  padding:16px 48px;font-size:1.1em;border:none;border-radius:14px;
+  cursor:pointer;font-weight:bold;font-family:inherit;
+  background:linear-gradient(135deg,#f7971e,#ff6a00);
+  color:#fff;transition:all 0.3s;letter-spacing:2px;
+}
+.btn:hover{opacity:0.85;transform:translateY(-2px);box-shadow:0 8px 30px rgba(247,151,30,0.3);}
+.btn:active{transform:scale(0.97);}
+
+.counter{color:#666;font-size:13px;margin-top:16px;}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📐 几何公式随机生成</h1>
+  <div class="sub">沪教版数学·六年级下册</div>
+
+  <div class="card" id="card">
+    <div class="title" id="cardTitle">👆 点击下方按钮</div>
+    <div class="formula" id="cardFormula">随机生成一个几何公式</div>
+    <div class="canvas-wrap" id="canvasWrap" style="display:none;"><canvas id="cv" width="360" height="160"></canvas></div>
+    <div class="params" id="cardParams"></div>
+    <div class="note" id="cardNote"></div>
+  </div>
+
+  <button class="btn" id="genBtn" onclick="generate()">🎲 随机生成</button>
+  <div class="counter">已生成 <span id="count">0</span> 次</div>
+</div>
+
+<script>
+const PI=Math.PI;
+let total=0;
+
+const items=[
+  {
+    name:'圆的面积', unit:'cm²',
+    gen:()=>{const r=rand(1,10);return{r,formula:`S = πr² = π×${r}² = ${(r*r).toFixed(1)}π`,note:'S = πr²',draw:cirArea};},
+  },
+  {
+    name:'扇形的面积', unit:'cm²',
+    gen:()=>{const r=rand(2,10),n=rand(30,270);return{r,n,formula:`S = nπr²/360 = ${n}π×${r}²/360 = ${(n*r*r/360).toFixed(1)}π`,note:'S = nπr²/360  (n为圆心角度数)',draw:secArea};},
+  },
+  {
+    name:'圆环的面积', unit:'cm²',
+    gen:()=>{const R=rand(4,10),r=rand(1,R-1);return{R,r,formula:`S = π(R²−r²) = π(${R}²−${r}²) = ${(R*R-r*r)}π`,note:'S = πR² − πr²',draw:ringArea};},
+  },
+  {
+    name:'圆的周长', unit:'cm',
+    gen:()=>{const r=rand(1,10);return{r,formula:`C = 2πr = 2π×${r} = ${(2*r).toFixed(1)}π`,note:'C = 2πr 或 C = πd',draw:cirArea};},
+  },
+  {
+    name:'扇形的弧长', unit:'cm',
+    gen:()=>{const r=rand(2,10),n=rand(30,270);return{r,n,formula:`l = nπr/180 = ${n}π×${r}/180 = ${(n*r/180).toFixed(1)}π`,note:'l = nπr/180  (n为圆心角度数)',draw:secArea};},
+  },
+  {
+    name:'扇面（扇环）的面积', unit:'cm²',
+    gen:()=>{const R=rand(4,10),r=rand(1,R-1),n=rand(30,240);return{R,r,n,formula:`S = nπ(R²−r²)/360 = ${n}π(${R}²−${r}²)/360 = ${(n*(R*R-r*r)/360).toFixed(1)}π`,note:'S = nπ(R²−r²)/360',draw:ringArea};},
+  },
+  {
+    name:'扇形的周长', unit:'cm',
+    gen:()=>{const r=rand(2,10),n=rand(30,270);const arc=n*PI*r/180;return{r,n,formula:`C = 2r + nπr/180 = 2×${r} + ${n}π×${r}/180 = ${(2*r).toFixed(0)} + ${arc.toFixed(1)}`,note:'C = 2r + l  (两条半径+弧长)',draw:secArea};},
+  },
+  {
+    name:'圆柱的侧面积', unit:'cm²',
+    gen:()=>{const r=rand(1,6),h=rand(2,10);return{r,h,formula:`S侧 = 2πrh = 2π×${r}×${h} = ${(2*r*h).toFixed(0)}π`,note:'S侧 = 2πrh = Ch',draw:cylSide};},
+  },
+  {
+    name:'圆柱的表面积', unit:'cm²',
+    gen:()=>{const r=rand(1,6),h=rand(2,10);return{r,h,formula:`S表 = 2πr²+2πrh = 2π×${r}²+2π×${r}×${h} = ${(2*r*r+2*r*h)}π`,note:'S表 = 2S底 + S侧',draw:cylSide};},
+  },
+  {
+    name:'圆柱的体积', unit:'cm³',
+    gen:()=>{const r=rand(1,6),h=rand(2,10);return{r,h,formula:`V = πr²h = π×${r}²×${h} = ${(r*r*h)}π`,note:'V = πr²h = S底×h',draw:cylSide};},
+  },
+  {
+    name:'圆锥的侧面积', unit:'cm²',
+    gen:()=>{const r=rand(1,6),h=rand(2,10);const l=Math.sqrt(r*r+h*h);return{r,h,l:l.toFixed(1),formula:`S侧 = πrl = π×${r}×${l.toFixed(1)} = ${(r*parseFloat(l.toFixed(1))).toFixed(1)}π`,note:'S侧 = πrl  (l为母线长=√(r²+h²))',draw:coneSide};},
+  },
+  {
+    name:'圆锥的表面积', unit:'cm²',
+    gen:()=>{const r=rand(1,6),h=rand(2,10);const l=Math.sqrt(r*r+h*h);return{r,h,l:l.toFixed(1),formula:`S表 = πr²+πrl = π×${r}²+π×${r}×${l.toFixed(1)} = ${(r*r+r*parseFloat(l.toFixed(1))).toFixed(1)}π`,note:'S表 = S底 + S侧',draw:coneSide};},
+  },
+  {
+    name:'圆锥的体积', unit:'cm³',
+    gen:()=>{const r=rand(1,6),h=rand(2,10);return{r,h,formula:`V = ⅓πr²h = ⅓π×${r}²×${h} = ${(r*r*h/3).toFixed(1)}π`,note:'V = ⅓πr²h = ⅓S底×h',draw:coneSide};},
+  },
+];
+
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+
+function generate(){
+  total++;document.getElementById('count').textContent=total;
+  const item=items[Math.floor(Math.random()*items.length)];
+  const data=item.gen();
+
+  document.getElementById('cardTitle').textContent=item.name;
+  document.getElementById('cardFormula').textContent=data.formula;
+  document.getElementById('cardParams').textContent=formatParams(data);
+  document.getElementById('cardNote').textContent=item.note;
+
+  const wrap=document.getElementById('canvasWrap');
+  if(data.draw){wrap.style.display='block';data.draw(data);}
+  else wrap.style.display='none';
+}
+
+function formatParams(d){
+  const parts=[];
+  if(d.r!==undefined)parts.push('r = '+d.r+' cm');
+  if(d.R!==undefined)parts.push('R = '+d.R+' cm');
+  if(d.h!==undefined)parts.push('h = '+d.h+' cm');
+  if(d.n!==undefined)parts.push('n = '+d.n+'°');
+  if(d.l!==undefined)parts.push('母线 l = '+d.l+' cm');
+  return parts.join('  |  ');
+}
+
+// Canvas drawings
+function cirArea(d){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,360,160);
+  const cx=180,cy=80,R=55;
+  ctx.beginPath();ctx.arc(cx,cy,R,0,2*PI);
+  ctx.fillStyle='rgba(247,151,30,0.3)';ctx.fill();
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+R,cy);
+  ctx.strokeStyle='#4fc3f7';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='13px sans-serif';ctx.textAlign='center';
+  ctx.fillText('r='+d.r,cx+R/2,cy-8);
+  ctx.fillText('O',cx,cy+16);
+}
+
+function secArea(d){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,360,160);
+  const cx=90,cy=80,R=55;
+  const n=d.n;const ang=n*PI/180;
+  ctx.beginPath();ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,R,-PI/2,-PI/2+ang);
+  ctx.closePath();
+  ctx.fillStyle='rgba(247,151,30,0.35)';ctx.fill();
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,8,-PI/2,-PI/2+ang);
+  ctx.strokeStyle='#ffd200';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='13px sans-serif';ctx.textAlign='center';
+  ctx.fillText('r='+d.r,cx+R*0.6,cy-12);
+  ctx.fillText('n='+d.n+'°',cx+30,cy+34);
+  ctx.fillText('O',cx,cy+16);
+}
+
+function ringArea(d){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,360,160);
+  const cx=160,cy=80,bigR=55,smallR=55*d.r/d.R;
+  ctx.beginPath();ctx.arc(cx,cy,bigR,0,2*PI);
+  ctx.arc(cx,cy,smallR,0,2*PI,true);
+  ctx.fillStyle='rgba(247,151,30,0.35)';ctx.fill();
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,smallR,0,2*PI);
+  ctx.strokeStyle='#4fc3f7';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+bigR,cy);
+  ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='center';
+  ctx.fillText('R='+d.R,cx+bigR/2,cy-8);
+  ctx.fillText('r='+d.r,cx-smallR-18,cy-8);
+}
+
+function cylSide(d){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,360,160);
+  // Simple cylinder side view
+  const cx=160,cy=80,w=60,h=80;
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=2;
+  ctx.strokeRect(cx-w/2,cy-h/2,w,h);
+  // Top ellipse
+  ctx.beginPath();ctx.ellipse(cx,cy-h/2,w/2,14,0,0,2*PI);
+  ctx.fillStyle='rgba(247,151,30,0.25)';ctx.fill();
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=1.5;ctx.stroke();
+  // Bottom ellipse
+  ctx.beginPath();ctx.ellipse(cx,cy+h/2,w/2,14,0,0,2*PI);
+  ctx.fillStyle='rgba(247,151,30,0.2)';ctx.fill();
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=1.5;ctx.stroke();
+  // Radius line
+  ctx.beginPath();ctx.moveTo(cx,cy-h/2+14);ctx.lineTo(cx+w/2,cy-h/2+14);
+  ctx.strokeStyle='#4fc3f7';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='center';
+  ctx.fillText('r='+d.r,cx+w/4,cy-h/2+8);
+  ctx.fillText('h='+d.h,cx+w/2+20,cy);
+}
+
+function coneSide(d){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,360,160);
+  const cx=160,cy=90,w=60,h=80;
+  // Triangle (cross-section)
+  ctx.beginPath();ctx.moveTo(cx,cy-h/2);
+  ctx.lineTo(cx-w/2,cy+h/2);ctx.lineTo(cx+w/2,cy+h/2);ctx.closePath();
+  ctx.fillStyle='rgba(247,151,30,0.25)';ctx.fill();
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=2;ctx.stroke();
+  // Base ellipse
+  ctx.beginPath();ctx.ellipse(cx,cy+h/2,w/2,12,0,0,2*PI);
+  ctx.fillStyle='rgba(247,151,30,0.15)';ctx.fill();
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=1.5;ctx.stroke();
+  // Radius
+  ctx.beginPath();ctx.moveTo(cx,cy+h/2);ctx.lineTo(cx+w/2,cy+h/2);
+  ctx.strokeStyle='#4fc3f7';ctx.lineWidth=1.5;ctx.stroke();
+  // Height
+  ctx.beginPath();ctx.moveTo(cx,cy-h/2);ctx.lineTo(cx,cy+h/2);
+  ctx.strokeStyle='#ffd200';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.stroke();ctx.setLineDash([]);
+  // Slant line
+  ctx.beginPath();ctx.moveTo(cx,cy-h/2);ctx.lineTo(cx+w/2,cy+h/2);
+  ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='center';
+  ctx.fillText('r='+d.r,cx+w/4,cy+h/2+17);
+  ctx.fillText('h='+d.h,cx+16,cy-10);
+}
+
+generate();
+</script>
+</body>
+</html>
