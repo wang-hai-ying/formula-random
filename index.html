@@ -53,6 +53,13 @@ canvas{border-radius:12px;}
 .btn:active{transform:scale(0.97);}
 
 .counter{color:#666;font-size:13px;margin-top:16px;}
+
+.btn-answer{
+  padding:10px 28px;font-size:0.95em;border:1px solid #f7971e;border-radius:10px;
+  cursor:pointer;font-family:inherit;background:rgba(247,151,30,0.1);color:#f7971e;
+  transition:all 0.3s;margin-top:16px;
+}
+.btn-answer:hover{background:rgba(247,151,30,0.2);}
 </style>
 </head>
 <body>
@@ -62,10 +69,13 @@ canvas{border-radius:12px;}
 
   <div class="card" id="card">
     <div class="title" id="cardTitle">👆 点击下方按钮</div>
-    <div class="formula" id="cardFormula">随机生成一个几何公式</div>
     <div class="canvas-wrap" id="canvasWrap" style="display:none;"><canvas id="cv" width="360" height="160"></canvas></div>
     <div class="params" id="cardParams"></div>
-    <div class="note" id="cardNote"></div>
+    <div id="answerArea" style="display:none;">
+      <div class="formula" id="cardFormula"></div>
+      <div class="note" id="cardNote"></div>
+    </div>
+    <button class="btn-answer" id="showAnswerBtn" onclick="showAnswer()" style="display:none;">💡 显示答案</button>
   </div>
 
   <button class="btn" id="genBtn" onclick="generate()">🎲 随机生成</button>
@@ -139,13 +149,26 @@ function generate(){
   const data=item.gen();
 
   document.getElementById('cardTitle').textContent=item.name;
-  document.getElementById('cardFormula').textContent=data.formula;
   document.getElementById('cardParams').textContent=formatParams(data);
+
+  // Store answer for later reveal
+  document.getElementById('cardFormula').textContent=data.formula;
   document.getElementById('cardNote').textContent=item.note;
+
+  // Hide answer, show button
+  document.getElementById('answerArea').style.display='none';
+  const btn=document.getElementById('showAnswerBtn');
+  btn.style.display='inline-block';
+  btn.textContent='💡 显示答案';
 
   const wrap=document.getElementById('canvasWrap');
   if(data.draw){wrap.style.display='block';data.draw(data);}
   else wrap.style.display='none';
+}
+
+function showAnswer(){
+  document.getElementById('answerArea').style.display='block';
+  document.getElementById('showAnswerBtn').style.display='none';
 }
 
 function formatParams(d){
