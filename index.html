@@ -26,10 +26,11 @@ h1{font-size:2.2em;background:linear-gradient(90deg,#f7971e,#ffd200);-webkit-bac
   animation:fadeUp 0.5s ease;
 }
 .card .formula{
-  font-size:1.8em;color:#ffd200;font-family:"Courier New",monospace;
+  font-size:1.6em;color:#ffd200;font-family:"Cambria Math","Times New Roman",serif;
   background:rgba(0,0,0,0.3);padding:16px 32px;border-radius:14px;
-  margin:12px 0;animation:fadeUp 0.5s ease 0.1s both;
+  margin:12px 0;animation:fadeUp 0.5s ease 0.1s both;letter-spacing:2px;
 }
+.card .formula .pi{font-family:"Cambria Math","Times New Roman",serif;font-style:italic;font-size:1.1em;color:#ffd700;}
 .card .params{
   color:#aaa;font-size:1em;margin-top:16px;line-height:1.8;
   animation:fadeUp 0.5s ease 0.2s both;
@@ -109,7 +110,7 @@ const items=[
   },
   {
     name:'扇面（扇环）的面积', unit:'cm²',
-    gen:()=>{const R=rand(4,10),r=rand(1,R-1),n=rand(30,240);return{R,r,n,formula:`S = nπ(R²−r²)/360 = ${n}π(${R}²−${r}²)/360 = ${(n*(R*R-r*r)/360).toFixed(1)}π`,note:'S = nπ(R²−r²)/360',draw:ringArea};},
+    gen:()=>{const R=rand(4,10),r=rand(1,R-1),n=rand(30,240);return{R,r,n,formula:`S = nπ(R²−r²)/360 = ${n}π(${R}²−${r}²)/360 = ${(n*(R*R-r*r)/360).toFixed(1)}π`,      note:'S = nπ(R²−r²)/360',draw:sectRing};},
   },
   {
     name:'扇形的周长', unit:'cm',
@@ -151,9 +152,10 @@ function generate(){
   document.getElementById('cardTitle').textContent=item.name;
   document.getElementById('cardParams').textContent=formatParams(data);
 
-  // Store answer for later reveal
-  document.getElementById('cardFormula').textContent=data.formula;
-  document.getElementById('cardNote').textContent=item.note;
+  // Style π in formula
+  const styled=data.formula.replace(/π/g,'<span class="pi">π</span>');
+  document.getElementById('cardFormula').innerHTML=styled;
+  document.getElementById('cardNote').innerHTML=item.note.replace(/π/g,'<span class="pi">π</span>');
 
   // Hide answer, show button
   document.getElementById('answerArea').style.display='none';
@@ -229,6 +231,35 @@ function ringArea(d){
   ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='center';
   ctx.fillText('R='+d.R,cx+bigR/2,cy-8);
   ctx.fillText('r='+d.r,cx-smallR-18,cy-8);
+}
+
+function sectRing(d){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,360,160);
+  const cx=120,cy=80,bigR=55,smallR=55*d.r/d.R;
+  const n=d.n;const ang=n*PI/180;
+  // Outer sector
+  ctx.beginPath();ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,bigR,-PI/2,-PI/2+ang);
+  ctx.closePath();
+  // Inner circle (cutout) - reverse direction for evenodd fill
+  ctx.moveTo(cx+smallR*Math.cos(-PI/2+ang),cy+smallR*Math.sin(-PI/2+ang));
+  ctx.arc(cx,cy,smallR,-PI/2+ang,-PI/2,true);
+  ctx.closePath();
+  ctx.fillStyle='rgba(247,151,30,0.35)';ctx.fill('evenodd');
+  ctx.strokeStyle='#f7971e';ctx.lineWidth=2;ctx.stroke();
+  // Inner arc
+  ctx.beginPath();ctx.arc(cx,cy,smallR,-PI/2,-PI/2+ang);
+  ctx.strokeStyle='#4fc3f7';ctx.lineWidth=1.5;ctx.stroke();
+  // Radius lines
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+bigR*Math.cos(-PI/2),cy+bigR*Math.sin(-PI/2));
+  ctx.moveTo(cx,cy);ctx.lineTo(cx+bigR*Math.cos(-PI/2+ang),cy+bigR*Math.sin(-PI/2+ang));
+  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='center';
+  ctx.fillText('R='+d.R,cx+bigR*0.6,cy-20);
+  ctx.fillText('r='+d.r,cx+smallR*0.7,cy-20);
+  ctx.fillText('n='+n+'°',cx+bigR+24,cy+10);
+  ctx.fillText('O',cx,cy+16);
 }
 
 function cylSide(d){
